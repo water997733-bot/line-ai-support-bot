@@ -55,6 +55,7 @@ async def receive_message(request: Request):
 
         if message_type == "text":
             user_text = message.get("text", {}).get("body", "")
+            print(f"收到訊息：{user_text}")
             reply_text = get_ai_reply(user_text)
             send_whatsapp_message(from_number, reply_text)
 
@@ -66,6 +67,7 @@ async def receive_message(request: Request):
 
 def get_ai_reply(user_text: str) -> str:
     try:
+        print("呼叫 OpenAI...")
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -84,7 +86,9 @@ def get_ai_reply(user_text: str) -> str:
             ],
             max_tokens=500
         )
-        return response.choices[0].message.content
+        reply = response.choices[0].message.content
+        print(f"OpenAI 回覆：{reply}")
+        return reply
     except Exception as e:
         print("OpenAI Error:", e)
         return "抱歉，AI 系統暫時無法回應，請稍後再試。"
