@@ -2,6 +2,7 @@ import os
 import requests
 from fastapi import FastAPI, Request, Response
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
@@ -10,8 +11,11 @@ app = FastAPI()
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 GRAPH_API_VERSION = "v19.0"
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 @app.get("/")
@@ -51,16 +55,39 @@ async def receive_message(request: Request):
 
         if message_type == "text":
             user_text = message.get("text", {}).get("body", "")
-            reply_text = (
-                f"已收到你的問題：{user_text}\n\n"
-                "目前 SDK / HDK AI 技術支援系統建置中。"
-            )
+            reply_text = get_ai_reply(user_text)
             send_whatsapp_message(from_number, reply_text)
 
     except Exception as e:
         print("Error:", e)
 
     return {"status": "ok"}
+
+
+def get_ai_reply(user_text: str) -> str:
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "你是 ITE SoC SDK/HDK 技術支援助理。"
+                        "請用繁體中文回答技術問題。"
+                        "回答要簡潔清楚，如果不確定答案請說明。"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": user_text
+                }
+            ],
+            max_tokens=500
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("OpenAI Error:", e)
+        return "抱歉，AI 系統暫時無法回應，請稍後再試。"
 
 
 def send_whatsapp_message(to: str, text: str):
@@ -80,4 +107,3 @@ def send_whatsapp_message(to: str, text: str):
     }
     response = requests.post(url, headers=headers, json=payload)
     print("WhatsApp API response:", response.status_code, response.text)
-
