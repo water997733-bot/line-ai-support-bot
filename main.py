@@ -81,16 +81,3 @@ def send_whatsapp_message(to: str, text: str):
     response = requests.post(url, headers=headers, json=payload)
     print("WhatsApp API response:", response.status_code, response.text)
 
-import threading
-import time
-
-def keep_alive():
-    while True:
-        time.sleep(840)  # 14分鐘
-        try:
-            requests.get("https://line-ai-support-bot.onrender.com")
-        except:
-            pass
-
-threading.Thread(target=keep_alive, daemon=True).start()
-
